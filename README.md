@@ -243,3 +243,9 @@ class MyClass extends superclass(MySuperClass).expressing(MyTrait) {
   }
 }
 ```
+
+## Credits
+Credit is most certainly due to [mixwith.js](https://github.com/justinfagnani/mixwith.js) for wrapping such a nice bow around mixins.
+It appeared to be an unmaintained project, so we copied it & created this one.
+
+`mutrait`is largely just a renaming from "mixin" to "trait", with some minor adjustments here & there.
