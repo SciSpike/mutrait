@@ -1,3 +1,2 @@
 #!/usr/bin/env bash
-export VERSION=0.2.0
-curl -sSL https://raw.githubusercontent.com/SciSpike/release-mgmt/nodejs-$VERSION/release-nodejs | sh -s -- $1
+curl -sSL https://raw.githubusercontent.com/SciSpike/release-mgmt/nodejs-0.2.0/release-nodejs | sh -s -- $1
