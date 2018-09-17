@@ -1,3 +1,3 @@
 #!/usr/bin/env bash
-EMAIL=${EMAIL:-mutrait@scispike.com}
-docker run --rm -i -v "$PWD:/gitrepo" -e EMAIL=$EMAIL scispike/release-nodejs:0.2.0 $1
+export VERSION=0.2.0
+curl -sSL https://raw.githubusercontent.com/SciSpike/release-mgmt/nodejs-$VERSION/release-nodejs | sh -s -- $1
