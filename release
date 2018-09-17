@@ -1,0 +1,2 @@
+#!/usr/bin/env bash
+docker run --rm -i -v "$PWD:/gitrepo" -e EMAIL=$EMAIL scispike/release-nodejs:nodejs-0.2.0 $1
