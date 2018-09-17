@@ -1,2 +1,3 @@
 #!/usr/bin/env bash
+EMAIL=${EMAIL:-mutrait@scispike.com}
 docker run --rm -i -v "$PWD:/gitrepo" -e EMAIL=$EMAIL scispike/release-nodejs:0.2.0 $1
