@@ -1,0 +1,10 @@
+language: node_js
+node_js:
+  - "8"
+deploy:
+  provider: npm
+  email: npm@scispike.com
+  api_key:
+    secure: O5HKo1VLwAqZPxmx25Num5ccjrZmVDTMj0cW6RXq0SbUB5xIVegGct78HKWog8vSK6FL8a2awK00QYKYucpjZXbxNUuc9ZQLA43KWRX5YUmDvfeiKR0wiEIZk26Djkl47iVhXVX3Ytv6rr+PIv1hq+UG3AIiFAacmxOw9bJjLytugdzf/XMurksJyhIwnF5K2xzeqSsHP4ny3BlTTj8X+gDzLRyyguTzVf7fUnQRJ906qjSnzLmGdND58FAkQKSsMkt9Tpnx16OHH597zJo/DHqz9+70oGDX+gEMNwqFW/owaYGSRxl/GqTGX7xhRiibgImnbs5FNMANbm6kvgWK/i7LEby38nNS4fdN98B128EqLyxh+cslhIUtX/83FXYrcrUyo7vSFdjA9SBodDKYgF4+ZzKPm66d3+LTANsr0z5e2jKgEvrDPrQzdVptxcq9Kg57wN69qWCnYATpy13M5b44ubXatZRkMDYyqPSm0Y81ZbHWhA92Wbx6cTX8bMLUUt02f4N8OzocxUAXl+Tal3I0h96uJzkYTHodfpya+bea2n/TfGbKyTGCn3+EdQCrAZ6QY4fQUcGb3cgPhYVxZXPjskvFpLjM0xhljbuHHhrQ+LLm3X16Z92XEfJRBrZYZycM7+myQIHCV9I9EdfACJM+ldBYqgUghJsWBt+89rw=
+  on:
+    tags: true
