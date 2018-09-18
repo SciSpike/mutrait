@@ -1,3 +1,12 @@
+
+![NpmLicense](https://img.shields.io/npm/l/mutrait.svg)
+![npm](https://img.shields.io/npm/v/mutrait.svg)
+![Travis (.org)](https://img.shields.io/travis/SciSpike/mutrait.svg)
+![npm](https://img.shields.io/npm/dw/mutrait.svg)
+![npm](https://img.shields.io/npm/dm/mutrait.svg)
+![npm](https://img.shields.io/npm/dy/mutrait.svg)
+![npm](https://img.shields.io/npm/dt/mutrait.svg)
+
 # `mutrait`
 (formerly [mixwith.js](https://github.com/justinfagnani/mixwith.js))
 
@@ -158,7 +167,7 @@ assert.throws(() => {
 * Traits can have constructors and instance methods & fields that are accessible to any class or trait involved.
 
 ### Syntax Sugar
-`mutraits` provides helpers `Trait`, `superclass`, `traits`, `trait` & `expressing` that ease in readability in various cases:
+`mutrait` provides helpers `Trait`, `superclass`, `traits`, `trait` & `expressing` that ease in readability in various cases:
 
 * Use `Trait` to define a trait:
 ```javascript
@@ -175,7 +184,12 @@ class Thing extends trait(MyTrait) {}
 class Thing extends traits(MyTrait, MyOtherTrait) {}
 ```
 
-* Use `superclass() & expressing()` when your class declares a superclass and expresses one or more traits:
+> NOTE:
+`traits` & `trait` are the same function.
+They're provided simply for readability's sake.
+Use whichever reads better for you.
+
+* Use `superclass().expressing()` when your class declares a superclass _and_ expresses one or more traits:
 ```javascript
 class Thing extends superclass(MySuper).expressing(MyTrait, MyOtherTrait) {}
 ```
@@ -248,4 +262,4 @@ class MyClass extends superclass(MySuperClass).expressing(MyTrait) {
 Credit is most certainly due to [mixwith.js](https://github.com/justinfagnani/mixwith.js) for wrapping such a nice bow around mixins.
 It appeared to be an unmaintained project, so we copied it & created this one.
 
-`mutrait`is largely just a renaming from "mixin" to "trait", with some minor adjustments here & there.
+`mutrait`is largely just a renaming from "mixin" to "trait", with some minor adjustments & bugfixes here & there, plus it's managed under a minor-release-per-branch strategy.
