@@ -243,7 +243,7 @@ const traits = (...ts) => superclass().expressing(...ts)
 /**
  * A convenient singular form of {@link traits} only for readability when expressing a single trait.
  *
- * @type {function(...[TraitFunction[]]): Function}
+ * @see traits
  */
 const trait = traits
 

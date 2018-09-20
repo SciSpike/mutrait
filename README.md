@@ -258,6 +258,50 @@ class MyClass extends superclass(MySuperClass).expressing(MyTrait) {
 }
 ```
 
+### Subtraits
+There may be time when you have a trait that requires other traits; this can be considering a `subtrait`.
+This is achieved by having a trait subclass a given class that expresses all required supertraits.
+The pattern for that follows.
+
+```javascript
+const Supertrait1 = Trait(s => class extends s {                    // 1
+  foo () { return 'foo from Supertrait1' }
+  bar () { return 'bar from Supertrait1' }
+  snafu () { return 'snafu from Supertrait1' }
+})
+
+const Supertrait2 = Trait(s => class extends s {                    // 2
+  foo () { return 'foo from Supertrait2' }
+  bar () { return 'bar from Supertrait2' }
+  snafu () { return 'snafu from Supertrait2' }
+})
+
+const Subtrait = Trait(s =>
+  class extends superclass(s).expressing(Supertrait1, Supertrait2) { // 3
+    bar () { return 'bar from Subtrait' }
+    snafu () { return 'snafu from Subtrait' }
+  })
+
+class C extends trait(Subtrait) {                                    // 4
+  snafu () { return 'snafu from C' }
+}
+
+const c = new C()
+assert.equal(c.foo(), 'foo from Supertrait2')                        // 5
+assert.equal(c.bar(), 'bar from Subtrait')
+assert.equal(c.snafu(), 'snafu from C')
+assert.isTrue(c instanceof Subtrait)
+assert.isTrue(c instanceof Supertrait2)
+assert.isTrue(c instanceof Supertrait1)
+```
+1: Some conventional trait.
+
+2: Another conventional trait.
+
+3: Pattern that illustrates a subtrait that requires the two supertraits.
+The order of overriding is "last one wins".
+In this case, `C` overrides `Subtrait` overrides `Subtrait2` overrides `Subtrait1`.
+
 ## Credits
 Credit is most certainly due to [mixwith.js](https://github.com/justinfagnani/mixwith.js) for wrapping such a nice bow around mixins.
 It appeared to be an unmaintained project, so we copied it & created this one.

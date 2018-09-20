@@ -471,6 +471,108 @@ suite('mutrait', () => {
     })
   })
 
+  suite('supertraits', () => {
+    test('single supertrait', () => {
+      const Supertrait = Trait(s => class extends s {
+        foo () { return 'foo' }
+      })
+
+      const Subtrait = Trait(s => class extends superclass(s).expressing(Supertrait) {
+        bar () { return 'bar' }
+      })
+
+      class C extends trait(Subtrait) {
+        snafu () { return 'snafu' }
+      }
+      const c = new C()
+      assert.equal(c.foo(), 'foo')
+      assert.equal(c.bar(), 'bar')
+      assert.equal(c.snafu(), 'snafu')
+    })
+
+    test('multiple supertraits', () => {
+      const Supertrait1 = Trait(s => class extends s {
+        foo1 () { return 'foo1' }
+      })
+
+      const Supertrait2 = Trait(s => class extends s {
+        foo2 () { return 'foo2' }
+      })
+
+      const Subtrait = Trait(s => class extends superclass(s).expressing(Supertrait1, Supertrait2) {
+        bar () { return 'bar' }
+      })
+
+      class C extends trait(Subtrait) {
+        snafu () { return 'snafu' }
+      }
+      const c = new C()
+      assert.equal(c.foo1(), 'foo1')
+      assert.equal(c.foo2(), 'foo2')
+      assert.equal(c.bar(), 'bar')
+      assert.equal(c.snafu(), 'snafu')
+    })
+
+    test('single supertrait with correct overrides', () => {
+      const Supertrait = Trait(s => class extends s {
+        foo () { return 'foo from Supertrait' }
+        bar () { return 'bar from Supertrait' }
+        snafu () { return 'snafu from Supertrait' }
+      })
+
+      const Subtrait = Trait(s => {
+        return class extends superclass(s).expressing(Supertrait) {
+          bar () { return 'bar from Subtrait' }
+          snafu () { return 'snafu from Subtrait' }
+        }
+      })
+
+      class C extends trait(Subtrait) {
+        snafu () { return 'snafu from C' }
+      }
+
+      const c = new C()
+      assert.equal(c.foo(), 'foo from Supertrait')
+      assert.equal(c.bar(), 'bar from Subtrait')
+      assert.equal(c.snafu(), 'snafu from C')
+    })
+
+    test('multiple supertraits with correct overrides', () => {
+      const Supertrait1 = Trait(s => class extends s {
+        bleep () { return 'bleep from Supertrait1' }
+        foo () { return 'foo from Supertrait1' }
+        bar () { return 'bar from Supertrait1' }
+        snafu () { return 'snafu from Supertrait1' }
+      })
+
+      const Supertrait2 = Trait(s => class extends s {
+        foo () { return 'foo from Supertrait2' }
+        bar () { return 'bar from Supertrait2' }
+        snafu () { return 'snafu from Supertrait2' }
+      })
+
+      const Subtrait = Trait(s =>
+        class extends superclass(s).expressing(Supertrait1, Supertrait2) {
+          bar () { return 'bar from Subtrait' }
+          snafu () { return 'snafu from Subtrait' }
+        })
+
+      class C extends trait(Subtrait) {
+        snafu () { return 'snafu from C' }
+      }
+
+      const c = new C()
+      assert.equal(c.bleep(), 'bleep from Supertrait1')
+      assert.equal(c.foo(), 'foo from Supertrait2')
+      assert.equal(c.bar(), 'bar from Subtrait')
+      assert.equal(c.snafu(), 'snafu from C')
+      assert.isTrue(c instanceof C)
+      assert.isTrue(c instanceof Subtrait)
+      assert.isTrue(c instanceof Supertrait2)
+      assert.isTrue(c instanceof Supertrait1)
+    })
+  })
+
   suite('real-world-ish traits', () => {
     test('validation works', () => {
       const Nameable = Trait(superclass => class extends superclass {
