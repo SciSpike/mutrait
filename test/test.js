@@ -323,7 +323,7 @@ suite('mutrait', () => {
   })
 
   suite('Dedupe', () => {
-    test('applies the trait the firstName time', () => {
+    test('applies the trait the first time', () => {
       const T = Dedupe(BareTrait((s) => class extends s {}))
 
       class C extends T(class {}) {}
@@ -332,7 +332,7 @@ suite('mutrait', () => {
       assert.isTrue(expresses(i, T))
     })
 
-    test('does\'nt apply the trait the second time', () => {
+    test('doesn\'t apply the trait the second time', () => {
       let applicationCount = 0
       const T = Dedupe(BareTrait((s) => {
         applicationCount++
