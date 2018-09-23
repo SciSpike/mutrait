@@ -1,6 +1,6 @@
 {
   "name": "mutrait",
-  "version": "1.0.0-pre.9",
+  "version": "1.0.0-pre.10",
   "description": "A simple, powerful trait applier for ES6+ classes",
   "main": "index.js",
   "directories": {
