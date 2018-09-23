@@ -1,4 +1,4 @@
-const _appliedTrait = '__mutrait_appliedTrait'
+const _appliedTrait = Symbol('_appliedTrait')
 
 /**
  * A function that returns an empty or non-empty subclass of its argument.
@@ -79,7 +79,7 @@ const expresses = (it, trait) => {
 }
 
 // used by wrap() and unwrap()
-const _wrappedTrait = '__mutrait_wrappedTrait'
+const _wrappedTrait = Symbol('_wrappedTrait')
 
 /**
  * Sets up the function `trait` to be wrapped by the function `wrapper`, while
@@ -116,7 +116,7 @@ const wrap = (trait, wrapper) => {
  */
 const unwrap = wrapper => wrapper[_wrappedTrait] || wrapper
 
-const _cachedApplications = '__mutrait_cachedApplications'
+const _cachedApplications = Symbol('_cachedApplications')
 
 /**
  * Decorates `trait` so that it caches its applications. When applied multiple
