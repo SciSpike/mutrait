@@ -1,4 +1,4 @@
-#!/usr/bin/env bash
+#!/bin/sh
 
 # MIT License
 #
@@ -37,16 +37,33 @@ MASTER=${MASTER:-master}
 TAG_PREFIX=${TAG_PREFIX:-''}
 TAG_SUFFIX=${TAG_SUFFIX:-''}
 BRANCH_PREFIX=${BRANCH_PREFIX:-'v'}
-BRANCH_SUFFIX=${BRANCH_SUFFIX:-''}
+BRANCH_SUFFIX=${BRANCH_SUFFIX:-''} # '.x' is a common one
 if [ -z "$NO_GIT_DISCOVERY_ACROSS_FILESYSTEM" ]; then
   GIT_DISCOVERY_ACROSS_FILESYSTEM=1 # needed when running in a docker container
+fi
+# support custom "pre" tokens
+PRE=${PRE:-pre}
+PRE_USAGE=pre
+if [ "$PRE" != "pre" ]; then
+  PRE_USAGE="$PRE_USAGE|$PRE"
+fi
+# support custom "rc" tokens
+RC=${RC:-rc}
+RC_USAGE=pre
+if [ "$RC" != "rc" ]; then
+  RC_USAGE="$RC_USAGE|$RC"
+fi
+
+if [ "$PRE" == "$RC" ]; then
+  echo "ERROR: PRE ($PRE) cannot be the same as RC ($RC)" >&2
+  exit 1
 fi
 
 usage() {
     cat<<EOF
 usage:
-if on $MASTER branch: release pre|rc [chart]
-if on release branch: release major|minor|patch|pre
+if on $MASTER branch: release $PRE_USAGE|$RC_USAGE
+if on release branch: release major|minor|patch|$PRE_USAGE
 
 optional supported environment variables:
 
@@ -65,7 +82,7 @@ EOF
 
 RELEASE_LEVEL="$1"
 case "$RELEASE_LEVEL" in
-  major|minor|patch|pre|rc)
+  major|minor|patch|pre|rc|$PRE|$RC)
     # ok
     ;;
   h|he|hel|help)
@@ -74,7 +91,7 @@ case "$RELEASE_LEVEL" in
     ;;
   *)
     if [ -n "$1" ]; then
-      echo "ERROR: specify release level of 'pre', 'patch', 'minor', 'major', or 'rc'" >&2
+      echo "ERROR: specify release level of 'pre' or '$PRE' for prerelease, 'rc' or '$RC' for release candidate, 'patch', 'minor', or 'major'" >&2
     fi
     usage
     exit 1
@@ -82,12 +99,12 @@ case "$RELEASE_LEVEL" in
 esac
 
 FX=fx
-if ! which $FX; then
-  FX="docker run --rm -i matthewadams12/$FX $FX"
+if [ -n "$NO_USE_LOCAL_FX" ] || ! which $FX; then
+  FX="docker run --rm -i matthewadams12/fx fx"
 fi
 MATCH=match
-if ! which $MATCH; then
-  MATCH="docker run --rm -i matthewadams12/$MATCH"
+if [ -n "$NO_USE_LOCAL_MATCH" ] || ! which $MATCH; then
+  MATCH="docker run --rm -i matthewadams12/match"
 fi
 
 PACKAGE_JSON="${PACKAGE_JSON:-package.json}"
@@ -100,13 +117,18 @@ getVersion() {
 # usage: setVersion version
 setVersion() {
   V=$1
-  PACKAGE_JSON_CONTENT="$(cat $PACKAGE_JSON)"
-  echo "$PACKAGE_JSON_CONTENT" \
-    | $FX "it => { it.version = \"$V\"; return it; }" \
-    > $PACKAGE_JSON
+  PACKAGE_JSON_CONTENT="$(cat $PACKAGE_JSON | $FX "it => { it.version = \"$V\"; return it; }")"
+  echo "$PACKAGE_JSON_CONTENT" | sed 's|\\|\\\\|g' > $PACKAGE_JSON
   echo "INFO: set 'version' attribute in $PACKAGE_JSON to $V"
   echo "$PACKAGE_JSON is now:"
   cat "$PACKAGE_JSON"
+  echo "INFO: running npm install to update package-lock.json"
+  if [ -f /.dockerenv ]; then
+    NODE_MODULES_WORKDIR=/tmp/node-work
+    mkdir -p $NODE_MODULES_WORKDIR
+    PREFIX_ARG="--prefix $NODE_MODULES_WORKDIR"
+  fi
+  npm install $PREFIX_ARG
 }
 
 echo "INFO: checking required preconditions"
@@ -136,7 +158,7 @@ fi
 
 BRANCH="$(git status | head -n 1 | awk '{ print $3 }')"
 if ! $MATCH "^(master|$BRANCH_PREFIX[0-9]{1,}\.[0-9]{1,}$BRANCH_SUFFIX)$" "$BRANCH"; then # it is not a master or a release branch
-  echo 'ERROR: you can only release from the master branch or release branches (vmajor.minor)!' >&2
+  echo 'ERROR: you can only release from the master branch or release branches!' >&2
   exit 3
 else
   echo "INFO: on branch $BRANCH, from which releases are allowed"
@@ -149,13 +171,13 @@ else
   echo "INFO: no differences between local & remote branch $BRANCH"
 fi
 
-if [ "$BRANCH" == "$MASTER" ]; then
+if [ "$BRANCH" = "$MASTER" ]; then
   case "$RELEASE_LEVEL" in
-    pre|rc)
+    pre|rc|$PRE|$RC)
       # ok
       ;;
     *)
-      echo "ERROR: only 'pre' or 'rc' releases are permitted from the $MASTER branch." >&2
+      echo "ERROR: only 'pre'/'$PRE' or 'rc'/'$RC' releases are permitted from the $MASTER branch." >&2
       exit 6
       ;;
   esac
@@ -165,7 +187,7 @@ else # this is a release branch
         # ok
         ;;
       *)
-        echo "ERROR: only 'rc', 'patch', 'minor', or 'major' releases are permitted from a release branch." >&2
+        echo "ERROR: only 'rc'/'$RC', 'patch', 'minor', or 'major' releases are permitted from a release branch." >&2
         exit 7
         ;;
   esac
@@ -176,8 +198,8 @@ echo "INFO: ok to proceed with $RELEASE_LEVEL from branch $BRANCH"
 echo "INFO: determining current version from $PACKAGE_JSON"
 
 VERSION="$(getVersion)"
-if ! $MATCH '\-(pre|rc)\.[0-9]{1,}$' "$VERSION"; then
-  echo 'ERROR: repository is in an inconsistent state: version does NOT end in a prerelease suffix!' >&2
+if ! $MATCH "\-($PRE|$RC)\.[0-9]{1,}$" "$VERSION"; then
+  echo "ERROR: repository is in an inconsistent state: version does NOT end in prerelease suffix $PRE!" >&2
   exit 3
 fi
 
@@ -210,10 +232,10 @@ applyChanges() {
   echo "$MSG"
 }
 
-if [ "$BRANCH" == "$MASTER" ]; then # this will be either an rc, resulting in a new release branch, or a pre
-  MATCHES="$($MATCH '^([0-9]{1,})\.([0-9]{1,})\.0\-pre\.([0-9]{1,})$' "$VERSION")"
+if [ "$BRANCH" = "$MASTER" ]; then # this will be either an rc, resulting in a new release branch, or a pre
+  MATCHES="$($MATCH "^([0-9]{1,})\.([0-9]{1,})\.0\-$PRE\.([0-9]{1,})$" "$VERSION")"
   if [ -z "$MATCHES" ]; then
-    echo "ERROR: the version does not match the format of major.minor.0-pre.n required in the $MASTER branch." >&2
+    echo "ERROR: the version does not match the format of major.minor.0-$PRE.n required in the $MASTER branch." >&2
     exit 8
   else
     echo "INFO: version $VERSION matches expected format for branch $BRANCH"
@@ -223,14 +245,14 @@ if [ "$BRANCH" == "$MASTER" ]; then # this will be either an rc, resulting in a 
   MAJOR="$(echo "$MATCHES" | awk '{ print $2 }')"
   MINOR="$(echo "$MATCHES" | awk '{ print $3 }')"
   PATCH=0
-  PRE="$(echo "$MATCHES" | awk '{ print $4 }')"
+  PRERELEASE="$(echo "$MATCHES" | awk '{ print $4 }')"
 
   case "$RELEASE_LEVEL" in
-  rc) # then it's time to create a new release branch
+  rc|$RC) # then it's time to create a new release branch
       NEW_RELEASE_BRANCH="$BRANCH_PREFIX$MAJOR.$MINOR$BRANCH_SUFFIX"
       git checkout -b $NEW_RELEASE_BRANCH
 
-      NEW_RELEASE_BRANCH_VERSION="$MAJOR.$MINOR.0-rc.0"
+      NEW_RELEASE_BRANCH_VERSION="$MAJOR.$MINOR.0-$RC.0"
 
       setVersion $NEW_RELEASE_BRANCH_VERSION
 
@@ -242,10 +264,10 @@ if [ "$BRANCH" == "$MASTER" ]; then # this will be either an rc, resulting in a 
       echo "INFO: checked out $MASTER"
 
       git cherry-pick $NEW_RELEASE_BRANCH # cherry pick from release branch to get release candidate commit in master
-      echo "INFO: cherry-picked $NEW_RELEASE_BRANCH rc commit into $MASTER"
+      echo "INFO: cherry-picked $NEW_RELEASE_BRANCH $RC commit into $MASTER"
 
       # advance master version
-      NEXT_VERSION="$MAJOR.$(($MINOR+1)).0-pre.0"
+      NEXT_VERSION="$MAJOR.$(($MINOR+1)).0-$PRE.0"
 
       setVersion $NEXT_VERSION $DOCKER_BUILD_STEP_NAMES
 
@@ -255,7 +277,7 @@ if [ "$BRANCH" == "$MASTER" ]; then # this will be either an rc, resulting in a 
       git checkout $NEW_RELEASE_BRANCH
       echo "INFO: checked out $NEW_RELEASE_BRANCH"
 
-      NEXT_RELEASE_BRANCH_VERSION="$MAJOR.$MINOR.0-rc.1"
+      NEXT_RELEASE_BRANCH_VERSION="$MAJOR.$MINOR.0-$RC.1"
 
       setVersion $NEXT_RELEASE_BRANCH_VERSION $DOCKER_BUILD_STEP_NAMES
 
@@ -264,12 +286,12 @@ if [ "$BRANCH" == "$MASTER" ]; then # this will be either an rc, resulting in a 
       exit 0
       ;;
 
-  pre)
+  pre|$PRE)
       setVersion $VERSION
 
       applyChanges "release $VERSION" $VERSION
 
-      NEXT_VERSION=$MAJOR.$MINOR.$PATCH-pre.$((PRE+1))
+      NEXT_VERSION=$MAJOR.$MINOR.$PATCH-$PRE.$((PRERELEASE+1))
 
       setVersion $NEXT_VERSION
 
@@ -282,9 +304,9 @@ fi
 
 # If we get this far, we are releasing something from a release branch.
 
-MATCHES="$($MATCH '^([0-9]{1,})\.([0-9]{1,})\.([0-9]{1,})\-rc\.([0-9]{1,})$' "$VERSION")"
+MATCHES="$($MATCH "^([0-9]{1,})\.([0-9]{1,})\.([0-9]{1,})\-$RC\.([0-9]{1,})$" "$VERSION")"
 if [ -z "$MATCHES" ]; then
-  echo "ERROR: the version does not match the format of major.minor.patch-rc.n required in the release branch." >&2
+  echo "ERROR: the version does not match the format of major.minor.patch-$RC.n required in the release branch." >&2
   exit 8
 else
     echo "INFO: version $VERSION matches expected format for branch $BRANCH"
@@ -293,7 +315,7 @@ fi
 MAJOR="$(echo "$MATCHES" | awk '{ print $2 }')"
 MINOR="$(echo "$MATCHES" | awk '{ print $3 }')"
 PATCH="$(echo "$MATCHES" | awk '{ print $4 }')"
-PRE="$(echo "$MATCHES" | awk '{ print $5 }')"
+PRERELEASE="$(echo "$MATCHES" | awk '{ print $5 }')"
 
 case "$RELEASE_LEVEL" in
   major|minor|patch)
@@ -301,23 +323,23 @@ case "$RELEASE_LEVEL" in
     # NOTE: if RELEASE_LEVEL is 'minor' & we're prepped for a major release, no harm, no foul.
     # A major release is the same as a minor release, only that the minor version is 0.
 
-    if [ $RELEASE_LEVEL == major ] && [ $MINOR != 0 ]; then
+    if [ $RELEASE_LEVEL = major ] && [ $MINOR != 0 ]; then
       echo "ERROR: this branch is not prepared for a major release because the minor version is $MINOR, not 0." >&2
       exit 10
     else
-      NEXT_RELEASE_BRANCH_VERSION="$MAJOR.$MINOR.1-rc.0"
+      NEXT_RELEASE_BRANCH_VERSION="$MAJOR.$MINOR.1-$RC.0"
     fi
-    if [ $RELEASE_LEVEL == minor ] && [ $PATCH != 0 ]; then
+    if [ $RELEASE_LEVEL = minor ] && [ $PATCH != 0 ]; then
       echo "ERROR: a minor release has already been performed in this release branch; only patch releases are allowed here now." >&2
       exit 11
     else
-      NEXT_RELEASE_BRANCH_VERSION="$MAJOR.$MINOR.1-rc.0"
+      NEXT_RELEASE_BRANCH_VERSION="$MAJOR.$MINOR.1-$RC.0"
     fi
-    if [ $RELEASE_LEVEL == patch ] && [ $PATCH == 0 ]; then
+    if [ $RELEASE_LEVEL = patch ] && [ $PATCH = 0 ]; then
       echo "ERROR: you must release a minor release before releasing a patch in this release branch." >&2
       exit 12
     else
-      NEXT_RELEASE_BRANCH_VERSION="$MAJOR.$MINOR.$((PATCH+1))-rc.0"
+      NEXT_RELEASE_BRANCH_VERSION="$MAJOR.$MINOR.$((PATCH+1))-$RC.0"
     fi
 
     echo "INFO: $RELEASE_LEVEL ok in branch $BRANCH"
@@ -335,12 +357,12 @@ case "$RELEASE_LEVEL" in
     exit 0
     ;;
 
-  rc)
+  rc|$RC)
     setVersion $VERSION
 
     applyChanges "release $VERSION" $VERSION
 
-    NEXT_RELEASE_BRANCH_VERSION="$MAJOR.$MINOR.$PATCH-rc.$((PRE+1))"
+    NEXT_RELEASE_BRANCH_VERSION="$MAJOR.$MINOR.$PATCH-$RC.$((PRERELEASE+1))"
 
     setVersion $NEXT_RELEASE_BRANCH_VERSION
 
