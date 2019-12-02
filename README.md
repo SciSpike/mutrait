@@ -15,6 +15,12 @@ A simple and powerful trait library for ES6+.
 `mutrait` uses a subclass factory strategy to introduce traits into classes (also known as "mixins"), along with some nice syntax sugar.
 It allows classes to override methods coming from not only superclasses, but also traits, and it allows traits to override methods from supertraits.
 
+> DEPRECATION NOTE:
+> Since the time this package was created, SciSpike has been acquired by [Northscaler](https://www.northscaler.com).
+> There will be no further development on this module.
+> Instead, development will continue at [@northscaler/mutrait](https://www.npmjs.com/package/@northscaler/mutrait).
+> You can see all of Northscaler's public Node.js modules at https://www.npmjs.com/search?q=%40northscaler.
+
 ## Hello, World!
 
 ```javascript
